@@ -1,13 +1,13 @@
 {
-  "name": "git",
+  "name": "npr",
   "version": "1.0.0",
-  "description": "",
+  "description": "Node Practice Repository",
   "main": "index.js",
   "scripts": {
     "start": "node ."
   },
   "keywords": [],
-  "author": "",
+  "author": "Abhay",
   "license": "ISC",
    "dependencies": {
     "adm-zip-node": "^0.4.17",
