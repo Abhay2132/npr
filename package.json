@@ -4,7 +4,7 @@
   "description": "Node Practice Repository",
   "main": "index.js",
   "scripts": {
-    "start": "node ."
+    "start": "while [ 1 -eq 1 ]; do node .; done;"
   },
   "keywords": [],
   "author": "Abhay",

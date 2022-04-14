@@ -59,14 +59,22 @@ async function setVersion(v = false) {
 	return !!fs.writeFileSync("./app.json", JSON.stringify({ version: v }));
 }
 
-(async function () {
+(async function () { // main function
 	let newV = await getVersion();
 	global.__appV = newV
 	let appJson = fs.existsSync("./app.json"),
 		src = fs.existsSync("./src")
-	//console.log({appJson, src , localVersion : getVersion(1), newV})
+		
 	if ( !appJson || !src || getVersion(1) != newV)
 		await getRepo(() => setVersion(newV));
 
 	startServer();
 })();
+
+global.__c4u = async function (req, res, next) {
+	let newV = await getVersion();
+	if ( getVersion(1) != newV ) {
+		res.on("finish", () => setTimeout( () => process.exit(!!console.log("Updating App ( restarting ... )")), 500))
+	}
+	next()
+}
