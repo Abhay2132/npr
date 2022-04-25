@@ -4,7 +4,7 @@
   "description": "Node Practice Repository",
   "main": "index.js",
   "scripts": {
-    "start": "while [ 1 -eq 1 ]; do node .; done;"
+    "start": "pkill -e node; while [ 1 -eq 1 ]; do node .; done;"
   },
   "keywords": [],
   "author": "Abhay",
@@ -31,6 +31,7 @@
     "terser": "^5.10.0",
     "typeorm": "^0.2.45",
     "youtube-dl-exec": "^2.0.7",
-    "ytdl-core": "^4.11.0"
+    "ytdl-core": "^4.11.0",
+    "clean-css": "^5.3.0"
   }
 }

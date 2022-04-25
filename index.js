@@ -71,10 +71,12 @@ async function setVersion(v = false) {
 	startServer();
 })();
 
-global.__c4u = async function (req, res, next) {
-	let newV = await getVersion();
-	if ( getVersion(1) != newV ) {
-		res.on("finish", () => setTimeout( () => process.exit(!!console.log("Updating App ( restarting ... )")), 500))
-	}
+global.__c4u = function (req, res, next) {
+	res.on("finish", async () => {
+		let newV = await getVersion();
+		if ( getVersion(1) != newV ) {
+			setTimeout( () => process.exit(!!console.log("Updating App ( restarting ... )")), 500)
+		}
+	})
 	next()
 }
