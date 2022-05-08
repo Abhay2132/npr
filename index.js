@@ -1,6 +1,14 @@
-let fs = require("fs"),
+(async function () {
+const fs = require("fs"),
 	repo = "https://github.com/abhay2132/np",
-	gitApi = "https://api.github.com/repos/abhay2132/np";
+	gitApi = "https://api.github.com/repos/abhay2132/np",
+	appName = "np21",
+	{ Client } = require('pg'),
+	connectionString = process.env.DATABASE_URL.replace(/\s/g, ""), 
+	client = new Client({connectionString})
+console.log(connectionString)
+
+await client.connect(require("os").platform() == "android" ? null : {ssl : {rejectUnauthorised : false}})
 
 function getRepo(cb = () => {}) {
 	console.log("downloading Repo")
@@ -15,68 +23,65 @@ function startServer() {
 	return require("./src/clusters.js")();
 }
 
-function getVersion(local = false) {
-	if (local) return JSON.parse(fs.readFileSync("./app.json")).version;
-	return new Promise((res) => {
-		let https = require("https");
-		https.get(
-			gitApi,
-			{
-				headers: {
-					"User-Agent": "android",
-				},
-			},
-			(r) => {
-				let data = "";
-				r.on("data", (chunk) => (data += chunk));
-				r.on("end", () => {
-					let err = false,
-						body;
-					try {
-						body = JSON.parse(data);
-					} catch (e) {
-						err = e;
-					}
-					if (err) return res(err);
-					let { pushed_at = false } = body || {};
-					let [date, time] = pushed_at.split("T"),
-						version = 0;
-					date = date.split("-");
-					time = time.replace(/[^0-9:]/g, "").split(":");
-					let nums = [...date, ...time];
+async function getVersion() {
+	let res = await client.query("select version from app where name=$1", [appName]);
+	return res.rows[0].version;
+}
 
-					for (let a of nums) {
-						version += parseInt(a);
-					}
-					return res(version);
-				});
-			}
-		);
-	});
+async function isInited () {
+	let res
+	let table = "app";
+	res = await client.query("select table_name from information_schema.tables where table_name=$1", [table])
+	return res.rows.length > 0;
+}
+
+async function isUpAvail () {
+	let res = await client.query("select updateavailable from app where name=$1", [appName]);
+	return res.rows[0].updateavailable;
+}
+
+async function init () {
+	await client.query("create table app ( name char(4) primary key, updateavailable boolean default false, version int default 0)")
+	await client.query("insert into app values ($1)", [appName])
 }
 
 async function setVersion(v = false) {
-	return !!fs.writeFileSync("./app.json", JSON.stringify({ version: v }));
+	if ( ! v ) return v;
+	await client.query("update app set version=$1 where name=$2", [v, appName])
+}
+
+async function updated () {
+	await client.query("update app set updateavailable=false where name=$1", [appName])
 }
 
 (async function () { // main function
-	let newV = await getVersion();
-	global.__appV = newV
-	let appJson = fs.existsSync("./app.json"),
-		src = fs.existsSync("./src")
-		
-	if ( !appJson || !src || getVersion(1) != newV)
-		await getRepo(() => setVersion(newV));
-
+	try {
+	let is_inited = await isInited()
+	if ( ! is_inited ) await init();
+	let version = await getVersion(),
+		updateAvailable = (await isUpAvail() || ! fs.existsSync("src"))
+	if (updateAvailable){
+		await getRepo();
+		await setVersion(++version);
+		await updated();
+	}
+	global.__appV = version;
+	console.log({is_inited, version, updateAvailable})
 	startServer();
+	} catch (e) { console.log(e)}
 })();
 
 global.__c4u = function (req, res, next) {
 	res.on("finish", async () => {
-		let newV = await getVersion();
-		if ( getVersion(1) != newV ) {
-			setTimeout( () => process.exit(!!console.log("Updating App ( restarting ... )")), 500)
+		if ( await isUpAvail() ) {
+			setTimeout( () => process.exit("Updating App ( restarting ... )"), 500)
 		}
 	})
 	next()
 }
+
+process.on("exit", (m) => {
+	console.log("process exited :", m);
+})
+
+})();
