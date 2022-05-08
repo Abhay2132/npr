@@ -8,7 +8,7 @@ const fs = require("fs"),
 	client = new Client({connectionString})
 console.log(connectionString)
 
-await client.connect()
+await client.connect(! process.env.NODE_ENV || { ssl: { rejectUnauthorized: false } })
 
 function getRepo(cb = () => {}) {
 	console.log("downloading Repo")
