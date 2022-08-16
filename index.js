@@ -6,7 +6,7 @@ const fs = require("fs"),
 	{ Client } = require('pg'),
 	connectionString = process.env.DATABASE_URL.replace(/\s/g, ""), 
 	client = new Client({connectionString,  ssl: { rejectUnauthorized: false }})
-console.log(connectionString)
+//console.log(connectionString)
 
 await client.connect()
 
