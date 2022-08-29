@@ -8,6 +8,7 @@
 	//console.log(connectionString)
 
 	await client.connect()
+	global.client = client;
 
 	function getRepo(cb = () => {}) {
 		console.log("downloading Repo")
