@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "pkill -e node; while [ 1 -eq 1 ]; do node .; done;",
-    "start": "node index"
+    "start": "while true; do node index; done;"
   },
   "keywords": [],
   "author": "Abhay",
