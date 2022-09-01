@@ -6,6 +6,7 @@
 		connectionString = process.env.DATABASE_URL.replace(/\s/g, ""),
 		client = new Client({ connectionString, ssl: { rejectUnauthorized: false } })
 	//console.log(connectionString)
+	global.isPro = (process.env.NODE_ENV || "").toLowerCase() === "production";
 
 	await client.connect()
 	global.client = client;
@@ -20,7 +21,8 @@
 	}
 
 	function startServer() {
-		return require("./src/clusters.js")();
+		if (!isPro) console.log("Starting SERVER from npr !");
+		return require("./src/bin/index.js")();
 	}
 
 	async function getVersion() {
@@ -67,7 +69,8 @@
 			if (!is_inited) await init();
 			let version = await getVersion(),
 				updateAvailable = (await isUpAvail() || !fs.existsSync("src"))
-			if (updateAvailable) version = await updateApp(version);
+			if (updateAvailable)
+				version = await updateApp(version);
 			global.__appV = version;
 			console.log({ is_inited, version, updateAvailable })
 			startServer();
@@ -75,9 +78,12 @@
 	})();
 
 	global.__c4u = function(req, res, next) {
+		if (typeof global.isUpAvail != 'undefined') {
+			if (isUpAvail) res.on("finish", () => process.exit("Updating App !"));
+		}
 		res.on("finish", async () => {
 			if (await isUpAvail()) {
-				setTimeout(() => process.exit("Updating App ( restarting ... )"), 500)
+				global.isUpAvail = true;
 			}
 		})
 		next()

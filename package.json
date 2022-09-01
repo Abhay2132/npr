@@ -4,7 +4,7 @@
   "description": "Node Practice Repository",
   "main": "index.js",
   "scripts": {
-    "test": "pkill -e node; while [ 1 -eq 1 ]; do node .; done;",
+    "test" : "pkill -e node  ; npm run start",
     "start": "while true; do node index; done;"
   },
   "keywords": [],
