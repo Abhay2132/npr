@@ -39,7 +39,7 @@
 
 	async function isUpAvail() {
 		let res = await client.query("select updateavailable from app where name=$1", [appName]);
-		console.log(res.rows);
+		//console.log(res.rows);
 		return res.rows[0].updateavailable;
 	}
 
@@ -65,12 +65,13 @@
 	}
 
 	(async function() { // main function
+		await getRepo();
 		try {
 			let is_inited = await isInited()
 			if (!is_inited) await init();
 			let version = await getVersion(),
-				updateAvailable = (await isUpAvail() || ! fs.existsSync("src"))
-			console.log({updateAvailable, src : fs.existsSync("src")});
+				updateAvailable = (await isUpAvail())
+			//console.log({updateAvailable, src : fs.existsSync("src")});
 			if (updateAvailable)
 				version = await updateApp(version);
 			global.__appV = version;
