@@ -5,7 +5,6 @@
 		{ Client } = require('pg'),
 		connectionString = process.env.DATABASE_URL.replace(/\s/g, ""),
 		client = new Client({ connectionString, ssl: { rejectUnauthorized: false } }),
-		f2m = process.env.f2m || "np/src", // File to move from repository to root dir
 		startScript = process.env.START_SCRIPT || "./src/bin/index.js",
 		mvCMD = process.env.mvCMD || "mv np/src src"
 
@@ -15,11 +14,14 @@
 	global.client = client;
 
 	function getRepo(cb = () => {}) {
-		console.log("downloading Repo")
+		console.log("downloading Repo", repo)
 		return new Promise((res) => {
 			let { exec } = require("child_process"),
-				cmd = `rm -r np ; rm -r src; git clone ${repo} && ${mvCMD} && rm np -r `;
-			exec(cmd, () => res(cb()));
+				cmd = `rm -r np ; rm -r src; git clone ${repo} ; ${mvCMD} ; rm ${appName} -r ; npm install`;
+			exec(cmd, (...a) => {
+				!isPro && console.log(...a);
+				res(cb())
+			});
 		});
 	}
 
@@ -45,6 +47,7 @@
 
 	async function isUpAvail() {
 		let res = await client.query("select updateavailable from app where name=$1", [appName]);
+		//console.log(res.rows);
 		return res.rows[0].updateavailable;
 	}
 
@@ -70,16 +73,17 @@
 	}
 
 	(async function() { // main function
+		await getRepo();
 		try {
-			let is_inited = await isInited();
-			console.log({ is_inited })
+			let is_inited = await isInited()
 			if (!is_inited) await init();
 			let version = await getVersion(),
-				updateAvailable = (await isUpAvail() || !fs.existsSync("src"))
+				updateAvailable = (await isUpAvail())
+			//console.log({updateAvailable, src : fs.existsSync("src")});
 			if (updateAvailable)
 				version = await updateApp(version);
 			global.__appV = version;
-			console.log({appName,  is_inited, version, updateAvailable })
+			console.log({ appName, is_inited, version, updateAvailable })
 			startServer();
 		} catch (e) { console.log(e) }
 	})();
