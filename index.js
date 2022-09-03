@@ -1,11 +1,14 @@
 (async function() {
 	const fs = require("fs"),
-		repo = "https://github.com/abhay2132/np",
-		appName = "np21",
+		repo = process.env.repoURL || "https://github.com/abhay2132/np",
+		appName = repo.split("/").at(-1),
 		{ Client } = require('pg'),
 		connectionString = process.env.DATABASE_URL.replace(/\s/g, ""),
-		client = new Client({ connectionString, ssl: { rejectUnauthorized: false } })
-	//console.log(connectionString)
+		client = new Client({ connectionString, ssl: { rejectUnauthorized: false } }),
+		f2m = process.env.f2m || "np/src", // File to move from repository to root dir
+		startScript = process.env.START_SCRIPT || "./src/bin/index.js",
+		mvCMD = process.env.mvCMD || "mv np/src src"
+
 	global.isPro = (process.env.NODE_ENV || "").toLowerCase() === "production";
 
 	await client.connect()
@@ -15,14 +18,14 @@
 		console.log("downloading Repo")
 		return new Promise((res) => {
 			let { exec } = require("child_process"),
-				cmd = `rm -r np ; rm -r src; git clone ${repo} && mv np/src src && rm np -r `;
+				cmd = `rm -r np ; rm -r src; git clone ${repo} && ${mvCMD} && rm np -r `;
 			exec(cmd, () => res(cb()));
 		});
 	}
 
 	function startServer() {
 		if (!isPro) console.log("Starting SERVER from npr !");
-		return require("./src/bin/index.js")();
+		return require(startScript)();
 	}
 
 	async function getVersion() {
@@ -34,12 +37,14 @@
 		let res
 		let table = "app";
 		res = await client.query("select table_name from information_schema.tables where table_name=$1", [table])
-		return res.rows.length > 0;
+		if (res.rows.length == 0) return false;
+		res = await client.query("select * from app where name=$1", [appName]);
+		if (res.rows.length == 0) await client.query("insert into app values ($1)", [appName]);
+		return true;
 	}
 
 	async function isUpAvail() {
 		let res = await client.query("select updateavailable from app where name=$1", [appName]);
-		//console.log(res.rows);
 		return res.rows[0].updateavailable;
 	}
 
@@ -65,17 +70,16 @@
 	}
 
 	(async function() { // main function
-		await getRepo();
 		try {
-			let is_inited = await isInited()
+			let is_inited = await isInited();
+			console.log({ is_inited })
 			if (!is_inited) await init();
 			let version = await getVersion(),
-				updateAvailable = (await isUpAvail())
-			//console.log({updateAvailable, src : fs.existsSync("src")});
+				updateAvailable = (await isUpAvail() || !fs.existsSync("src"))
 			if (updateAvailable)
 				version = await updateApp(version);
 			global.__appV = version;
-			console.log({ is_inited, version, updateAvailable })
+			console.log({appName,  is_inited, version, updateAvailable })
 			startServer();
 		} catch (e) { console.log(e) }
 	})();
